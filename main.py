@@ -3,7 +3,6 @@ import requests
 import torch
 from torch.nn import MultiheadAttention
 
-
 # Set the torch seed
 torch.manual_seed(1337)
 
@@ -170,7 +169,6 @@ class GPT(torch.nn.Module):
         x_new  = torch.cat((x, x_next), dim=1)
         return x_new
 
-
 # Train Bigram Language
 def train_bigram(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
     # Create optimizer
@@ -199,15 +197,12 @@ if __name__ == "__main__":
     # Validation dataset
     val = data[n:]
     # Create bigram model
-    model = GPT(len(vocab), 64, 4, 64, 4)
+    model = GPT(len(vocab), 32, 3, 32, 8)
     # Train model
-    train_bigram(model, train, batch_size=32, block_size=64, steps=5000, lr=1e-4)
+    train_bigram(model, train, batch_size=32, block_size=32, steps=2000, lr=1e-3)
     # Start with new line character
-    idx = torch.zeros((1,64), dtype=torch.long)
+    idx = torch.zeros((1,32), dtype=torch.long)
     # Generate words
     for _ in range(1000):
         idx = model.generate(idx)
-    # Decode it to text
-    novel = decode(idx[0].tolist())
-    # Print generated text
-    print(novel)
+        print(decode([idx[0][-1].tolist()]),end="")
