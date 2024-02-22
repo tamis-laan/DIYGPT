@@ -1,5 +1,6 @@
-# DIYGPT
-Do it yourself GPT
+# DIYGPT - Do it yourself GPT
+
+This is a mini GPT model written from scratch using pytorch for educational reasons.
 
 Create a virtual environment
 ``` bash
