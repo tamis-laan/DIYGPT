@@ -21,3 +21,6 @@ Run the script
 ``` bash
 python main.py
 ```
+
+TODO:
+- Export to onnix and make it run on a website

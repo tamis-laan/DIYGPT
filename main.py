@@ -119,9 +119,9 @@ class GPT(torch.nn.Module):
         self.head_size  = head_size
         self.heads      = heads
         # Create bigram
-        self.token_embedding_table = torch.nn.Embedding(vocab_size, head_size*heads)
+        self.word_embedding = torch.nn.Embedding(vocab_size, head_size*heads)
         # Encode token position
-        self.pos = torch.nn.Embedding(block_size, head_size*heads)
+        self.position_embedding = torch.nn.Embedding(block_size, head_size*heads)
         # Create self attention heads
         # self.blocks = Block(block_size, head_size, heads)
         self.blocks = torch.nn.Sequential(
@@ -136,11 +136,11 @@ class GPT(torch.nn.Module):
         # Get dims
         B,T = idx.shape
         # Embed tokens
-        token_embed = self.token_embedding_table(idx) # (B,T,C)
+        token_embedding = self.word_embedding(idx) # (B,T,C)
         # Token position embedding
-        pos_embed = self.pos(torch.arange(T)) # (T,C)
+        position_embedding = self.position_embedding(torch.arange(T)) # (T,C)
         # Cat emebddings
-        x = token_embed + pos_embed # (B,T,C)
+        x = token_embedding + position_embedding # (B,T,C)
         # Apply self attention
         x = self.blocks(x)
         # Get logits
@@ -170,23 +170,31 @@ class GPT(torch.nn.Module):
         return x_new
 
 # Train Bigram Language
-def train_bigram(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
+def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
+    # Smoothing decay
+    decay = .95
+    # Smoothing loss
+    smooth_loss = None
     # Create optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     # Start training
     for step in range(steps):
         xb, yb = batch(train, block_size, batch_size)
         _, loss = model(xb,yb)
-        print(f"\repoch: {step} loss: {loss}", end="", flush=True)
+        if smooth_loss is None:
+            smooth_loss = loss
+        else:
+            smooth_loss = decay*smooth_loss + (1-decay)*loss
+        print(f"\repoch: {step} loss: {smooth_loss:.2f} {loss:.2f}", end="", flush=True)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
 
 # Main
 if __name__ == "__main__":
-    # # Load dataset
+    # Load dataset
     text = dataset()
-    # # Create tokeniser
+    # Create tokeniser
     encode,decode,vocab = tokeniser(text)
     # Encode text
     data = torch.tensor(encode(text), dtype=torch.long)
@@ -199,10 +207,21 @@ if __name__ == "__main__":
     # Create bigram model
     model = GPT(len(vocab), 32, 3, 32, 8)
     # Train model
-    train_bigram(model, train, batch_size=32, block_size=32, steps=2000, lr=1e-3)
+    train_gpt(model, train, batch_size=64, block_size=32, steps=10, lr=1e-3)
     # Start with new line character
     idx = torch.zeros((1,32), dtype=torch.long)
     # Generate words
     for _ in range(1000):
         idx = model.generate(idx)
         print(decode([idx[0][-1].tolist()]),end="")
+
+    # Export model in onnx format
+    model.eval()
+    torch.onnx.export(
+        model,
+        torch.zeros((1,32), dtype=torch.long),
+        "model.onnx", 
+        input_names=['input'],
+        output_names=['output']
+    )
+
