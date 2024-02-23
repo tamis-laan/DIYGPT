@@ -1,7 +1,6 @@
 import os
 import requests
 import torch
-from torch.nn import MultiheadAttention
 
 # Set the torch seed
 torch.manual_seed(1337)
@@ -171,6 +170,8 @@ class GPT(torch.nn.Module):
 
 # Train Bigram Language
 def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
+    # Set model to training mode
+    model.train()
     # Smoothing decay
     decay = .95
     # Smoothing loss
@@ -184,8 +185,8 @@ def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
         if smooth_loss is None:
             smooth_loss = loss
         else:
-            smooth_loss = decay*smooth_loss + (1-decay)*loss
-        print(f"\repoch: {step} loss: {smooth_loss:.2f} {loss:.2f}", end="", flush=True)
+            smooth_loss = decay*smooth_loss + (1-decay)*loss.item()
+        print(f"\rstep: {step}/{steps} loss: {smooth_loss:.2f} {loss:.2f}", end="", flush=True)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
@@ -207,16 +208,16 @@ if __name__ == "__main__":
     # Create bigram model
     model = GPT(len(vocab), 32, 3, 32, 8)
     # Train model
-    train_gpt(model, train, batch_size=64, block_size=32, steps=10, lr=1e-3)
+    train_gpt(model, train, batch_size=64, block_size=32, steps=50000, lr=1e-3)
     # Start with new line character
     idx = torch.zeros((1,32), dtype=torch.long)
     # Generate words
+    model.eval()
     for _ in range(1000):
         idx = model.generate(idx)
         print(decode([idx[0][-1].tolist()]),end="")
 
     # Export model in onnx format
-    model.eval()
     torch.onnx.export(
         model,
         torch.zeros((1,32), dtype=torch.long),
