@@ -1,6 +1,7 @@
 import os
 import requests
 import torch
+import json
 
 # Set the torch seed
 torch.manual_seed(1337)
@@ -23,7 +24,7 @@ def dataset():
     return content
 
 # Generate tokeniser from dataset
-def tokeniser(dataset):
+def tokenise(dataset):
     # Extract unique characters used
     vocab = sorted(list(set(dataset)))
     # Construct string to int mapping
@@ -34,8 +35,14 @@ def tokeniser(dataset):
     encode = lambda s: [stoi[c] for c in s]
     # Construct tokeniser decoder
     decode = lambda l: ''.join([itos[i] for i in l])
+    # Define tokeniser for export
+    tokeniser = {
+        "vocab":vocab,
+        "stoi": stoi,
+        "itos": itos,
+    }
     # Return encoder decoder
-    return encode, decode, vocab
+    return encode, decode, vocab, tokeniser
 
 # Sample a training batch from source dataset
 def batch(source, block_size=8, batch_size=4):
@@ -154,7 +161,7 @@ class GPT(torch.nn.Module):
         # Reshape targets
         targets = targets.view(B*T)
         # Compute the loss
-        loss = torch.nn.functional.cross_entropy(rlogits,targets)
+        loss = torch.nn.functional.cross_entropy(rlogits,targets.long())
         # Return 
         return logits, loss
 
@@ -165,8 +172,7 @@ class GPT(torch.nn.Module):
         logits = logits[:,-1,:]
         probs  = torch.nn.functional.softmax(logits, dim=1)
         x_next = torch.multinomial(probs, num_samples=1)
-        x_new  = torch.cat((x, x_next), dim=1)
-        return x_new
+        return x_next.int()
 
 # Train Bigram Language
 def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
@@ -196,9 +202,12 @@ if __name__ == "__main__":
     # Load dataset
     text = dataset()
     # Create tokeniser
-    encode,decode,vocab = tokeniser(text)
+    encode,decode,vocab, tokeniser = tokenise(text)
+    # Save tokeniser to disk
+    with open("tokeniser.json", "w") as json_file:
+        json_file.write(json.dumps(tokeniser))
     # Encode text
-    data = torch.tensor(encode(text), dtype=torch.long)
+    data = torch.tensor(encode(text), dtype=torch.int)
     # Split dataset
     n = int(0.9*len(data))
     # Training dataset
@@ -208,19 +217,37 @@ if __name__ == "__main__":
     # Create bigram model
     model = GPT(len(vocab), 32, 3, 32, 8)
     # Train model
-    train_gpt(model, train, batch_size=64, block_size=32, steps=50000, lr=1e-3)
+    train_gpt(model, train, batch_size=64, block_size=32, steps=2000, lr=1e-3)
     # Start with new line character
-    idx = torch.zeros((1,32), dtype=torch.long)
+    idx = torch.zeros((1,32), dtype=torch.int)
     # Generate words
     model.eval()
     for _ in range(1000):
-        idx = model.generate(idx)
+        idx  = torch.cat((idx, model.generate(idx)), dim=1)
         print(decode([idx[0][-1].tolist()]),end="")
+
+
+    # Export model
+    class OnnxModel(torch.nn.Module):
+        def __init__(self, model):
+            super().__init__()
+            self.model = model
+        def forward(self,x):
+            # Add batch dimension on input
+            x = x.unsqueeze(0)
+            # Run generate
+            y = self.model.generate(x)
+            # Remove batch dimension
+            y = y.squeeze(0)
+            return y
+
+    # Wrap the model for onnx export
+    onnx_model = OnnxModel(model)
 
     # Export model in onnx format
     torch.onnx.export(
-        model,
-        torch.zeros((1,32), dtype=torch.long),
+        onnx_model,
+        torch.zeros((32), dtype=torch.int),
         "model.onnx", 
         input_names=['input'],
         output_names=['output']

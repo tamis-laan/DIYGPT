@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>ONNX Model Inference</title>
+		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+	</head>
+	<body>
+		<h1>Run ONNX Model in Browser</h1>
+		<button id="runModel">Run Model</button>
+    <pre id="output"></pre>
+	</body>
+</html>
+
+<script>
+
+// Load the tokenizer
+async function tokeniser(path) {
+	// Fetch the tokenizer
+	const response = await fetch(path);
+	if (!response.ok) {
+		throw new Error('Network response was not ok');
+	}
+  const data = await response.json();
+
+	console.log(data)
+
+	// Construct encoder
+	const encode = s => Array.from(s, c => data.stoi[c]);
+
+	// Construct decoder
+	const decode = l => l.map(i => data.itos[i]).join('');
+	
+	// Return encoder decoder
+	return {encode, decode};
+}
+
+// Generate new token
+async function generate(session, input) {
+		// Run the model
+		const inputs = { input: input }; // Replace 'inputName' with your model's input name
+		// Get the results
+		const result = await session.run(inputs);
+		// Access the output (adjust 'outputName' as needed)
+		const output = result.output; // Replace 'outputName' with your model's output name
+		// Return int
+		return output.data[0]
+}
+
+// Add value to the end while the first value drops off
+function enque(array, value) {
+	for (let i = 0; i<array.length-1; i++) {
+		array[i] = array[i+1]
+	}
+	array[array.length-1] = value
+}
+
+// Sleep
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Run model and generate text
+async function run(session, decode, element) {
+		// Prepare the input tensor
+		input = new ort.Tensor('int32', new Int32Array(32).fill(0), [32]);
+
+		// Generate text
+		for (let i = 1; i <= 1000; i++) {
+			// Generate a new token
+			token_new = await generate(session, input)
+			// Decode token
+			token_decoded = decode([token_new])
+			// Append new data to the end
+			enque(input.data,token_new)
+			// Append
+			element.innerText += decode([token_new])
+			await sleep(1)
+		}
+}
+
+async function main() {
+	try {
+		// Get the output paragraph element
+		const element = document.getElementById('output');
+
+		// Load tokeniser
+		const {encode, decode} = await tokeniser('tokeniser.json')
+
+		// Load the model
+		const session = await ort.InferenceSession.create("model.onnx");
+
+		// Event handler for run model button
+		document.getElementById('runModel').addEventListener('click', function() {
+			element.innerText = ""
+			run(session, decode, element)
+		})
+
+	} catch (e) {
+		document.write(`${e}`);
+	}
+}
+main();
+
+</script>
