@@ -62,6 +62,9 @@ async function attach(button, output, max_tokens = 1000, tokeniser_file = "token
 		// Prepare the input tensor
 		input = new ort.Tensor('int32', new Int32Array(32).fill(0), [32]);
 
+		// Disable the button while generating text
+		button.disabled = true
+
 		// Generate text
 		for (let i = 1; i <= max_tokens; i++) {
 			// Generate a new token
@@ -74,6 +77,9 @@ async function attach(button, output, max_tokens = 1000, tokeniser_file = "token
 			output.innerText += decode([token_new])
 			await sleep(1)
 		}
+
+		// Enable the button
+		button.disabled = false
 	})
 
 }
