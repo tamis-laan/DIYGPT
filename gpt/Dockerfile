@@ -12,6 +12,10 @@ WORKDIR /app
 # Create output directory
 RUN mkdir /out
 
+# Mount as volume to get the tokeniser and model output
+# EXAMPLE: docker run -v "$(pwd)/out:/out" gpt --steps 2500
+VOLUME ["/out"]
+
 # Copy dependencies
 COPY requirements.txt /app
 
