@@ -1,4 +1,4 @@
-// Sleep
+// Sleep in milliseconds
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -10,9 +10,9 @@ async function tokeniser(path) {
 	if (!response.ok) {
 		throw new Error('Network response was not ok');
 	}
-	const data = await response.json();
 
-	console.log(data)
+	// Get the json data
+	const data = await response.json();
 
 	// Construct encoder
 	const encode = s => Array.from(s, c => data.stoi[c]);
