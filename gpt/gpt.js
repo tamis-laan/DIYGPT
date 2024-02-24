@@ -45,13 +45,13 @@ async function generate(session, input) {
 }
 
 // Attach model for generation
-async function attach(button, output) {
+async function attach(button, output, tokeniser_file = "tokeniser.json", model_file = "model.onnx") {
 
 	// Load tokeniser
-	const { encode, decode } = await tokeniser('tokeniser.json')
+	const { _, decode } = await tokeniser(tokeniser_file)
 
 	// Load the model
-	const session = await ort.InferenceSession.create("model.onnx");
+	const session = await ort.InferenceSession.create(model_file);
 
 	// Event handler for run model button
 	button.addEventListener('click', async function() {
