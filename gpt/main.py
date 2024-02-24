@@ -210,26 +210,53 @@ def main(
         tokeniser_file:str="tokeniser.json",
         model_file:str="model.onnx"
     ):
+    # Log
+    print("[*] Load dataset")
+
     # Load dataset
     text = dataset()
+
+    # Log
+    print("[*] Generate tokeniser")
+
     # Create tokeniser
     encode,decode,vocab, tokeniser = tokenise(text)
+
+    # Log
+    print("[*] Export tokeniser")
+
     # Save tokeniser to disk
     with open(tokeniser_file, "w") as json_file:
         json_file.write(json.dumps(tokeniser))
+
+    # Log
+    print("[*] Construct dataset")
+
     # Encode text
     data = torch.tensor(encode(text), dtype=torch.int)
     # Split dataset
     n = int(0.9*len(data))
     # Training dataset
     train = data[:n]
-    # # Validation dataset
-    # val = data[n:]
+
+    # Log
+    print("[*] Construct model")
+
     # Create bigram model
     model = GPT(len(vocab), block_size, blocks, head_size, heads)
+
+    # Log
+    print("[*] train model")
+
     # Train model
-    # train_gpt(model, train, batch_size=64, block_size=32, steps=2000, lr=1e-3)
-    train_gpt(model, train, block_size, batch_size, steps, learning_rate)
+    try:
+        train_gpt(model, train, block_size, batch_size, steps, learning_rate)
+    except KeyboardInterrupt:
+        print("\n[!] Aborted training!")
+
+    # Log
+    print("[*] Generate example")
+
     # Start with new line character
     idx = torch.zeros((1,block_size), dtype=torch.int)
     # Generate words
@@ -256,6 +283,9 @@ def main(
     # Wrap the model for onnx export
     onnx_model = OnnxModel(model)
 
+    # Log
+    print("[*] Export model")
+    
     # Export model in onnx format
     torch.onnx.export(
         onnx_model,

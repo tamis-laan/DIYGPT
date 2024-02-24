@@ -28,7 +28,7 @@ ENTRYPOINT ["python", "main.py" \
 	,"--block-size", "256" \
 	,"--blocks", "6" \
 	,"--learning-rate", "3e-4" \
-	,"--head-size", "24" \
+	,"--head-size", "64" \
 	,"--heads", "6" \
 	,"--steps", "5000" \
 	,"--tokeniser-file", "/out/tokeniser.json" \
