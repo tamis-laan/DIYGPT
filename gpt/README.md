@@ -1,6 +1,6 @@
-# DIYGPT - Do it yourself GPT
+# Do it yourself GPT
 
-This is a mini GPT model written from scratch using pytorch for educational reasons.
+This is a mini GPT model written from scratch using pytorch.
 
 Create a virtual environment
 ``` bash
@@ -21,6 +21,3 @@ Run the script
 ``` bash
 python main.py
 ```
-
-TODO:
-- Export to onnix and make it run on a website
