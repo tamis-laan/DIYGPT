@@ -45,7 +45,7 @@ async function generate(session, input) {
 }
 
 // Attach model for generation
-async function attach(button, output, max_tokens = 1000, tokeniser_file = "tokeniser.json", model_file = "model.onnx") {
+async function attach(button, output, block_size = 32, max_tokens = 1000, tokeniser_file = "tokeniser.json", model_file = "model.onnx") {
 
 	// Load tokeniser
 	const { _, decode } = await tokeniser(tokeniser_file)
@@ -60,7 +60,7 @@ async function attach(button, output, max_tokens = 1000, tokeniser_file = "token
 		output.innerText = ""
 
 		// Prepare the input tensor
-		input = new ort.Tensor('int32', new Int32Array(32).fill(0), [32]);
+		input = new ort.Tensor('int32', new Int32Array(block_size).fill(0), [32]);
 
 		// Disable the button while generating text
 		button.disabled = true
