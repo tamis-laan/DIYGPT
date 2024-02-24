@@ -2,6 +2,8 @@
 
 This is a mini GPT model written from scratch using pytorch.
 
+Note that you can break out of the training loop using ctl-C and the script will save the model to disk from the last training step.
+
 Create a virtual environment
 ``` bash
 python -m venv .venv
@@ -28,7 +30,7 @@ docker build . --tag gpt:latest
 ```
 
 ``` bash
-docker run -v "$(pwd)/out:/out" gpt:latest --steps 1
+docker run -v "$(pwd)/out:/out" gpt:latest --steps 2500
 ```
 
 Serve the demo website
