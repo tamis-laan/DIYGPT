@@ -21,3 +21,8 @@ Run the script
 ``` bash
 python main.py
 ```
+
+Serve the demo website
+``` bash
+python serve.py
+```
