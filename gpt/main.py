@@ -9,7 +9,9 @@ torch.manual_seed(1337)
 
 # Download dataset
 def dataset():
-    filename = "input.txt"
+    # Location to cache the dataset on disk
+    filename = "/tmp/input.txt"
+    # Url to download the dataset from
     url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
     # Download dataset
     if not os.path.exists(filename):
@@ -67,6 +69,7 @@ class SelfAttentionHead(torch.nn.Module):
         self.query = torch.nn.Linear(C, H, bias=False)
         self.value = torch.nn.Linear(C, H, bias=False)
         self.register_buffer('t', torch.tril(torch.ones(T,T)))
+
     def forward(self, x):
         # Compute the key
         k = self.key(x) # B,T,H
@@ -99,6 +102,7 @@ class FeedForward(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(4*C,C), 
         )
+
     def forward(self,x):
         return self.net(x)
 
@@ -109,6 +113,7 @@ class Block(torch.nn.Module):
         self.head = MultiSelfAttentionHead(T,C,H, heads, encoder)
         self.ln2  = torch.nn.LayerNorm(C)
         self.ff   = FeedForward(H*heads)
+
     def forward(self,x):
         x = x + self.head(self.ln1(x))
         x = x + self.ff(self.ln2(x))
@@ -197,6 +202,7 @@ def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, learning_ra
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+
 
 # Main
 def main(
