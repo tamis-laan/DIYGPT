@@ -45,7 +45,7 @@ async function generate(session, input) {
 }
 
 // Attach model for generation
-async function attach(button, output, max_tokens = 100, tokeniser_file = "tokeniser.json", model_file = "model.onnx") {
+async function attach(button, output, max_tokens = 1000, tokeniser_file = "tokeniser.json", model_file = "model.onnx") {
 
 	// Load tokeniser
 	const { _, decode } = await tokeniser(tokeniser_file)
