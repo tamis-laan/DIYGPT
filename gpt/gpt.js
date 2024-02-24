@@ -60,7 +60,7 @@ async function attach(button, output, block_size = 32, max_tokens = 1000, tokeni
 		output.innerText = ""
 
 		// Prepare the input tensor
-		input = new ort.Tensor('int32', new Int32Array(block_size).fill(0), [32]);
+		input = new ort.Tensor('int32', new Int32Array(block_size).fill(0), [block_size]);
 
 		// Disable the button while generating text
 		button.disabled = true
