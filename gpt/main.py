@@ -2,6 +2,7 @@ import os
 import requests
 import torch
 import json
+import typer
 
 # Set the torch seed
 torch.manual_seed(1337)
@@ -175,7 +176,7 @@ class GPT(torch.nn.Module):
         return x_next.int()
 
 # Train Bigram Language
-def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
+def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, learning_rate=1e-3):
     # Set model to training mode
     model.train()
     # Smoothing decay
@@ -183,7 +184,7 @@ def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
     # Smoothing loss
     smooth_loss = None
     # Create optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     # Start training
     for step in range(steps):
         xb, yb = batch(train, block_size, batch_size)
@@ -198,13 +199,23 @@ def train_gpt(model, train, block_size=8, batch_size=32, steps=1000, lr=1e-3):
         optimizer.step()
 
 # Main
-if __name__ == "__main__":
+def main(
+        batch_size:int=64, 
+        block_size:int=32, 
+        blocks:int=3, 
+        head_size:int=32, 
+        heads:int=8, 
+        steps:int=2000, 
+        learning_rate:float=1e-3,
+        tokeniser_file:str="tokeniser.json",
+        model_file:str="model.onnx"
+    ):
     # Load dataset
     text = dataset()
     # Create tokeniser
     encode,decode,vocab, tokeniser = tokenise(text)
     # Save tokeniser to disk
-    with open("tokeniser.json", "w") as json_file:
+    with open(tokeniser_file, "w") as json_file:
         json_file.write(json.dumps(tokeniser))
     # Encode text
     data = torch.tensor(encode(text), dtype=torch.int)
@@ -212,14 +223,15 @@ if __name__ == "__main__":
     n = int(0.9*len(data))
     # Training dataset
     train = data[:n]
-    # Validation dataset
-    val = data[n:]
+    # # Validation dataset
+    # val = data[n:]
     # Create bigram model
-    model = GPT(len(vocab), 32, 3, 32, 8)
+    model = GPT(len(vocab), block_size, blocks, head_size, heads)
     # Train model
-    train_gpt(model, train, batch_size=64, block_size=32, steps=2000, lr=1e-3)
+    # train_gpt(model, train, batch_size=64, block_size=32, steps=2000, lr=1e-3)
+    train_gpt(model, train, block_size, batch_size, steps, learning_rate)
     # Start with new line character
-    idx = torch.zeros((1,32), dtype=torch.int)
+    idx = torch.zeros((1,block_size), dtype=torch.int)
     # Generate words
     model.eval()
     for _ in range(1000):
@@ -247,9 +259,12 @@ if __name__ == "__main__":
     # Export model in onnx format
     torch.onnx.export(
         onnx_model,
-        torch.zeros((32), dtype=torch.int),
-        "model.onnx", 
+        torch.zeros((block_size), dtype=torch.int),
+        model_file, 
         input_names=['input'],
         output_names=['output']
     )
 
+
+if __name__ == "__main__":
+    typer.run(main)

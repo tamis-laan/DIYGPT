@@ -22,7 +22,17 @@ Run the script
 python main.py
 ```
 
+You can also use docker
+``` bash
+docker build . --tag gpt:latest
+```
+
+``` bash
+docker run -v "$(pwd)/out:/out" gpt:latest --steps 1
+```
+
 Serve the demo website
 ``` bash
 python serve.py
 ```
+
