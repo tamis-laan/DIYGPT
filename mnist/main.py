@@ -5,7 +5,6 @@ import torchvision
 import torchvision.transforms as transforms
 import typer
 
-
 # Define the neural network architecture
 class Net(nn.Module):
     def __init__(self):
@@ -24,7 +23,7 @@ class Net(nn.Module):
         x = self.fc2(x)
         return torch.log_softmax(x, dim=1)
 
-def main():
+def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_file="model.onnx"):
     # Define the device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -35,21 +34,21 @@ def main():
     ])
 
     # Load and preprocess the MNIST dataset
-    trainset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+    trainset = torchvision.datasets.MNIST(root='/tmp', train=True, download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
-    testset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False)
+    testset = torchvision.datasets.MNIST(root='/tmp', train=False, download=True, transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
 
     # Create an instance of the network
     model = Net().to(device)
 
     # Define the loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Training the network
-    for epoch in range(1):  # loop over the dataset multiple times
+    for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -91,7 +90,7 @@ def main():
     torch.onnx.export(
         model,
         torch.zeros(1, 1, 28, 28, dtype=torch.float),
-        "model.onnx", 
+        model_file, 
         input_names=['input'],
         output_names=['output']
     )
