@@ -110,6 +110,12 @@ async function attach(canvas, classify, clear, results, model_file) {
 	// Event listener for clearing canvas
 	classify.addEventListener('click', async function() {
 
+		// Disable the button while classifying
+		classify.disabled = true
+
+		// Show loading on results
+		results.innerText = 'processing ...'
+
 		// Create a dummy canvas just for scaling
 		const scaledCanvas = document.createElement('canvas');
 
@@ -137,9 +143,6 @@ async function attach(canvas, classify, clear, results, model_file) {
 
 		// Create input tensor
 		tensor = new ort.Tensor('float32', new Float32Array(inputarray), [1, 1, 28, 28]);
-
-		// Disable the button while generating text
-		classify.disabled = true
 
 		// Run the model
 		const inputs = { input: tensor };
