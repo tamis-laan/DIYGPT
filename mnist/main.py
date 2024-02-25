@@ -33,6 +33,9 @@ def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_fi
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
+    # Log
+    print('[*] Load MNIST dataset')
+
     # Load and preprocess the MNIST dataset
     trainset = torchvision.datasets.MNIST(root='/tmp', train=True, download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
@@ -47,27 +50,33 @@ def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_fi
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # Training the network
-    for epoch in range(epochs):  # loop over the dataset multiple times
+    # Log
+    print('[*] Train model')
 
-        running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
-            inputs, labels = data[0].to(device), data[1].to(device)
+    # Training the model
+    try:
+        for epoch in range(epochs):  # loop over the dataset multiple times
 
-            optimizer.zero_grad()
+            running_loss = 0.0
+            for i, data in enumerate(trainloader, 0):
+                inputs, labels = data[0].to(device), data[1].to(device)
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+                optimizer.zero_grad()
 
-            running_loss += loss.item()
-            if i % 100 == 99:    # print every 100 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 100))
-                running_loss = 0.0
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
 
-    print('Finished Training')
+                running_loss += loss.item()
+                if i % 100 == 99:    # print every 100 mini-batches
+                    print('[%d, %5d] loss: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 100))
+                    running_loss = 0.0
+        print('[*] Finished Training')
+    except KeyboardInterrupt:
+        print("\n[!] Aborted training!")
+
 
     # Test the network on the test data
     correct = 0
@@ -80,8 +89,10 @@ def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_fi
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print('Accuracy of the network on the 10000 test images: %d %%' % (
-        100 * correct / total))
+    print('Model accuracy on 10000 test images: %d %%' % (100 * correct / total))
+
+    # Log
+    print('[*] Export model to onnx format')
 
     # Evaluation mode
     model.eval()
@@ -94,6 +105,9 @@ def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_fi
         input_names=['input'],
         output_names=['output']
     )
+
+    # Log
+    print('[*] done')
 
 if __name__ == "__main__":
     typer.run(main)
