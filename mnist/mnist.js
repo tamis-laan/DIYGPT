@@ -47,12 +47,25 @@ function displayResults(probabilities, container) {
 // Attach
 async function attach(canvas, classify, clear, results, model_file) {
 
+	// Disable buttons while loading
+	classify.disabled = true
+	clear.disabled = true
+
+	// Display loading text
+	results.innerText = 'Loading model...'
+
 	// Load the model
 	const session = await ort.InferenceSession.create(model_file);
 
+	// Clear loading text
+	results.innerText = ''
+
+	// Enable buttons again
+	classify.disabled = false
+	clear.disabled = false
+
 	// Get canvas context
 	const ctx = canvas.getContext('2d');
-
 
 	// Is drawing global
 	let isDrawing = false;
@@ -82,6 +95,7 @@ async function attach(canvas, classify, clear, results, model_file) {
 	// Function to clear canvas
 	function clearCanvas() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		results.innerText = ''
 	}
 
 	// Event listeners for drawing
