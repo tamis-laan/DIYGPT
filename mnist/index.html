@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+		<script src="mnist.js"></script>
+		<title>MNIST Digit Recognition</title>
+		<style>
+		#canvas {
+			border: 1px solid black;
+			background-color: black;
+		}
+		</style>
+	</head>
+	<body>
+		<h2>Draw a digit</h2>
+		<canvas id="canvas" width="256" height="256"></canvas>
+		<br>
+		<button id="classify">Classify</button>
+		<button id="clear">Clear</button>
+		<h2>Results</h2>
+		<div id="results"></div>
+
+		<script>
+			const canvas   = document.getElementById("canvas")
+			const classify = document.getElementById("classify")
+			const clear    = document.getElementById("clear")
+			const results  = document.getElementById("results")
+			attach(canvas, classify, clear, results)
+		</script>
+	</body>
+</html>
