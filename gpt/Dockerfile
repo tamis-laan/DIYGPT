@@ -29,12 +29,12 @@ COPY main.py /app
 # Use default parameters for a larger model
 ENTRYPOINT ["python", "main.py" \
 	,"--batch-size", "64" \
-	,"--block-size", "256" \
+	,"--block-size", "128" \
 	,"--blocks", "6" \
 	,"--learning-rate", "3e-4" \
 	,"--head-size", "64" \
 	,"--heads", "6" \
-	,"--steps", "5000" \
+	,"--steps", "10000" \
 	,"--tokeniser-file", "/out/tokeniser.json" \
 	,"--model-file", "/out/model.onnx" \
 	]
