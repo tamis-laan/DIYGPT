@@ -45,10 +45,10 @@ function displayResults(probabilities, container) {
 
 
 // Attach
-async function attach(canvas, classify, clear, results) {
+async function attach(canvas, classify, clear, results, model_file) {
 
 	// Load the model
-	const session = await ort.InferenceSession.create("model.onnx");
+	const session = await ort.InferenceSession.create(model_file);
 
 	// Get canvas context
 	const ctx = canvas.getContext('2d');
