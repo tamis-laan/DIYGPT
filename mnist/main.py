@@ -23,7 +23,7 @@ class Net(nn.Module):
         x = self.fc2(x)
         return torch.log_softmax(x, dim=1)
 
-def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_file="model.onnx"):
+def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_filename="model"):
     # Define the device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -97,14 +97,27 @@ def main(epochs:int = 10, batch_size:int=64, learning_rate:float=0.001, model_fi
     # Evaluation mode
     model.eval()
 
+    # Define the trace
+    trace = torch.zeros(1, 1, 28, 28, dtype=torch.float)
+
     # Export model in onnx format
     torch.onnx.export(
         model,
-        torch.zeros(1, 1, 28, 28, dtype=torch.float),
-        model_file, 
+        trace,
+        model_filename + ".onnx", 
         input_names=['input'],
         output_names=['output']
     )
+
+    # Log
+    print('[*] Export model to torch script')
+    script_module = torch.jit.trace(model, trace)
+
+    # Test the script module
+    script_module(trace)
+
+    # Save the torch script
+    script_module.save(model_filename + ".pt")
 
     # Log
     print('[*] done')
