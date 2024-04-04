@@ -1,0 +1,19 @@
+apiVersion: skaffold/v4beta9
+kind: Config
+metadata:
+  name: pipelines
+build:
+  artifacts:
+    - image: ai-models
+      docker:
+        dockerfile: Dockerfile
+manifests:
+  rawYaml:
+    - k8s/namespace.yaml
+    - k8s/sentiment.yaml
+portForward:
+  - resourceType: deployment
+    resourceName: sentiment
+    namespace: ai-models
+    port: 8000
+    localPort: 8000

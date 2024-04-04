@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer
+  namespace: pipeline-wiki
+  labels:
+    app: producer
+    pipeline: wiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      containers:
+      - name: producer
+        image: services
+        env:
+          - name: KAFKA_BOOTSTRAP
+            value: data-bus-kafka-bootstrap.kafka:9092
+          - name: KAKFA_CLIENTID
+            value: wiki.producer
+          - name: URL
+            value: https://stream.wikimedia.org/v2/stream/page-create
+          - name: TOPIC
+            value: wiki.page-create
+          - name: FILTER_DATABASE
+            value: "(^enwiki$|^nlwiki$)"
+          - name: FILTER_TITLE
+            value: "^[^:]*$"
+
+        command: ['producer']
+        imagePullPolicy: Never
+

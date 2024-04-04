@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment
+  namespace: ai-models
+  labels:
+    app: sentiment
+    pipeline: wiki
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sentiment
+  template:
+    metadata:
+      labels:
+        app: sentiment
+    spec:
+      containers:
+      - name: sentiment
+        image: ai-models
+        env:
+          - name: PORT
+            value: "8000"
+        command: ["python"]
+        args: ["/app/jobs/sentiment.py"]
+        imagePullPolicy: Never
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentiment
+  namespace: ai-models
+spec:
+  selector:
+    app: sentiment
+  ports:
+    - name: endpoint
+      protocol: TCP
+      port: 8000
+      targetPort: 8000

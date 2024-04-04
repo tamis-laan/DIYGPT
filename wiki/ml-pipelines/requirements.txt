@@ -1,0 +1,5 @@
+numpy~=1.26.0
+torch~=2.2.2
+transformers~=4.39.3 
+fastapi~=0.110.1 
+uvicorn~=0.29.0

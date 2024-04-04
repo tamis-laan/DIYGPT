@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: storage
+spec:
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: quay.io/minio/minio:latest
+          env:
+            - name: MINIO_ROOT_USER
+              value: your-minio-access-key
+            - name: MINIO_ROOT_PASSWORD
+              value: your-minio-secret-key
+          command:
+            - /bin/bash
+            - -c
+            - minio server /data --console-address :9090
+          ports:
+            - containerPort: 9090
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: storage
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: user-interface
+      protocol: TCP
+      port: 9000
+      targetPort: 9000
+    - name: console
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-create-bucket
+  namespace: storage
+spec:
+  template:
+    metadata:
+      labels:
+        app: minio-create-bucket
+    spec:
+      containers:
+        - name: minio-create-bucket
+          image: minio/mc
+          env:
+            - name: MC_HOST
+              value: http://minio:9000
+            - name: MC_ACCESS_KEY
+              value: your-minio-access-key
+            - name: MC_SECRET_KEY
+              value: your-minio-secret-key
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # Create alias
+              until mc alias set minio $MC_HOST $MC_ACCESS_KEY $MC_SECRET_KEY >/dev/null; do
+                echo "Waiting for minio container to start..."
+                sleep 1
+              done
+
+              # Create a bucket
+              mc mb minio/my-bucket
+
+      restartPolicy: Never

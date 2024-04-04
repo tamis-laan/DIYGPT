@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: classifier
+  namespace: pipeline-wiki
+  labels:
+    app: classifier
+    pipeline: wiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: classifier
+  template:
+    metadata:
+      labels:
+        app: classifier
+    spec:
+      containers:
+      - name: classifier
+        image: services
+        env:
+          - name: KAFKA_BOOTSTRAP
+            value: data-bus-kafka-bootstrap.kafka.svc.cluster.local:9092
+          - name: KAFKA_GROUPID
+            value: wiki.classifier
+          - name: TOPIC_INPUT
+            value: wiki.page-create
+          - name: TOPIC_OUTPUT
+            value: wiki.page-create.classified
+          - name: MODEL_HOST
+            value: sentiment.ai-models.svc.cluster.local
+          - name: MODEL_PORT
+            value: "8000"
+        command: ['classifier']
+        imagePullPolicy: Never

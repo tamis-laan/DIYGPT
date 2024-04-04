@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: printer
+  namespace: pipeline-wiki
+  labels:
+    app: printer
+    pipeline: wiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: printer
+  template:
+    metadata:
+      labels:
+        app: printer
+    spec:
+      containers:
+      - name: printer
+        image: services
+        env:
+          - name: KAFKA_BOOTSTRAP
+            value: data-bus-kafka-bootstrap.kafka:9092
+          - name: KAFKA_GROUPID
+            value: wiki.printers
+          - name: TOPIC
+            value: wiki.page-create
+        command: ['printer']
+        imagePullPolicy: Never

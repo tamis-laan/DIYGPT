@@ -1,0 +1,24 @@
+apiVersion: skaffold/v4beta9
+kind: Config
+metadata:
+  name: pipelines
+build:
+  artifacts:
+    - image: spark
+      docker:
+        dockerfile: spark.Dockerfile
+    - image: flink
+      docker:
+        dockerfile: flink.Dockerfile
+manifests:
+  rawYaml:
+    # - k8s/wiki-filter.yaml
+    - k8s/test.yaml
+resourceSelector:
+  allow:
+    - groupKind: "SparkApplication.sparkoperator.k8s.io"
+      image: [".*"]
+      labels: [".*"]
+    - groupKind: "FlinkDeployment.flink.apache.org"
+      image: [".*"]
+      labels: [".*"]

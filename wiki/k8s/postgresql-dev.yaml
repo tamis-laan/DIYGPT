@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: password
+            - name: POSTGRES_DB
+              value: db
+          ports:
+            - containerPort: 5432
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: storage
+spec:
+  selector:
+    app: postgres
+  ports:
+    - name: sql
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-create-table
+  namespace: storage
+spec:
+  template:
+    metadata:
+      labels:
+        app: postgres-create-table
+    spec:
+      containers:
+        - name: postgres-create-table
+          image: postgres
+          env:
+            - name: PGHOST
+              value: postgres
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              value: password
+            - name: PGDATABASE
+              value: db
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # Ping server
+              until psql -c "SELECT 1;"; do
+                echo "Waiting for minio container to start..."
+                sleep 1
+              done
+              # Create table
+              psql -c "
+                CREATE TABLE users (
+                  id SERIAL PRIMARY KEY,
+                  name VARCHAR(50)
+                );
+              "
+      restartPolicy: Never
