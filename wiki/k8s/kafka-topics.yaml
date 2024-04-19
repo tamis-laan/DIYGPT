@@ -9,6 +9,7 @@ metadata:
 spec:
   partitions: 1
   replicas: 1
+
 ---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic

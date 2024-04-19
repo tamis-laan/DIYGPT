@@ -67,6 +67,7 @@ type WikiPageCreateLocal struct {
 	Comment            string    `json:"comment"`
 	ParsedComment      string    `json:"parsedcomment"`
 	Dt                 string    `json:"dt"`
+	Page               string    `json:page`
 }
 
 // // Parse the wiki page create json

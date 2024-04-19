@@ -26,14 +26,17 @@ spec:
           - name: KAKFA_CLIENTID
             value: wiki.producer
           - name: URL
+            # value: https://stream.wikimedia.org/v2/stream/page-create?since=2024-04-05
             value: https://stream.wikimedia.org/v2/stream/page-create
           - name: TOPIC
             value: wiki.page-create
+          - name: SINCE
+            value: "2024-04-05"
           - name: FILTER_DATABASE
-            value: "(^enwiki$|^nlwiki$)"
+            value: "^(enwiki)$"
           - name: FILTER_TITLE
             value: "^[^:]*$"
 
-        command: ['producer']
+        command: ['wgo']
+        args: ['run', 'cmd/producer/main.go']
         imagePullPolicy: Never
-

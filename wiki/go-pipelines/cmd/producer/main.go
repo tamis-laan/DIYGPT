@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +12,7 @@ import (
 	"services/pkg/schema"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/tmaxmax/go-sse"
 
@@ -21,13 +22,15 @@ import (
 
 // Read configuration
 func init() {
+
 	// Define command-line flags
 	pflag.String("kafka.bootstrap", "localhost:9092", "Kafka bootstrap servers")
 	pflag.String("kafka.clientid", "wiki producer", "The kafka client id")
 	pflag.String("url", "https://stream.wikimedia.org/v2/stream/test", "The stream to scrape from")
 	pflag.String("topic", "wiki.test", "The topic to publish to")
-	pflag.String("filter.database", "", "Regex filter for database property")
-	pflag.String("filter.title", "", "Regex filter for title property")
+	pflag.String("since", "", "From when to start the stream")
+	pflag.String("filter.database", "^(enwiki|nlwiki)$", "Regex filter for database property")
+	pflag.String("filter.title", "^[^:]*$", "Regex filter for title property")
 
 	// Parse command-line flags
 	pflag.Parse()
@@ -44,6 +47,7 @@ func init() {
 }
 
 func unpack(jsonData string) (schema.WikiPageCreateLocal, error) {
+
 	// Create struct
 	var origin schema.WikiPageCreateOrigin
 
@@ -79,6 +83,7 @@ func unpack(jsonData string) (schema.WikiPageCreateLocal, error) {
 
 // Scrape url
 func scrape(client *http.Client, url string) (string, error) {
+
 	// Create request
 	req, err := http.NewRequest("GET", url, nil)
 
@@ -88,7 +93,7 @@ func scrape(client *http.Client, url string) (string, error) {
 	}
 
 	// Send the request
-	resp, err := client.Do(req)
+	res, err := client.Do(req)
 
 	// Handle errors
 	if err != nil {
@@ -96,17 +101,64 @@ func scrape(client *http.Client, url string) (string, error) {
 	}
 
 	// Close body
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
-	// Read and print the response body
-	body, err := io.ReadAll(resp.Body)
+	// Handle incorrect response
+	if res.StatusCode != 200 {
+		return "", errors.New(fmt.Sprintf("Non 200 response %d", res.StatusCode))
+	}
+
+	// Load the HTML document
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+
+	// Handle error
+	if err != nil {
+		return "", err
+	}
+
+	// Remove all <table> elements
+	doc.Find("table").Remove()
+
+	// Remove all script script and meta stuff
+	doc.Find("script, style, noscript, .metadata").Remove()
+
+	// Remove footer
+	doc.Find("div.printfooter").Remove()
+
+	// Remove references
+	doc.Find("sup.reference").Remove()
+
+	// Remove reference list
+	doc.Find("div.reflist, h2 span#References").Remove()
+
+	// Remove edit buttons
+	doc.Find("span.mw-editsection").Remove()
+
+	// Extract content
+	content := doc.Find("div#mw-content-text.mw-body-content").Text()
+
+	// Strip tabs
+	content = strings.ReplaceAll(content, `\t`, "")
+
+	// Regex to find multiple new lines in a row
+	newlineRegex, err := regexp.Compile(`(\n\s*)+`)
 
 	// Handle error
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return string(body), nil
+	// Replace multiple new lines with a single new line
+	content = newlineRegex.ReplaceAllString(content, "\n")
+
+	// Reject empty pages
+	if content == "" {
+		return "", errors.New("Empty page content!")
+	}
+
+	// Return extracted content
+	return content, nil
+
 }
 
 // Start producer
@@ -165,14 +217,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Scraper http client
+	cclient := http.Client{}
+
 	// Subscribe to message event
 	conn.SubscribeEvent("message", func(event sse.Event) {
 
 		// Extract out relevant values into struct
 		content, err := unpack(event.Data)
-
-		// // Check regex match
-		// log.Println("MATCH:", content.Database, re.MatchString(content.Database))
 
 		// Only focus on nlwiki
 		if content.UserIsBot == true ||
@@ -185,6 +237,18 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Scrape page
+		page, err := scrape(&cclient, content.Uri)
+
+		// Handle error
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		// Attach page
+		content.Page = page
 
 		// Turn page into json
 		contentJson, err := json.MarshalIndent(content, "", "  ")

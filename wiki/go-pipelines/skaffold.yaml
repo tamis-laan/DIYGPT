@@ -7,8 +7,16 @@ build:
     - image: services
       docker:
         dockerfile: Dockerfile
+      sync:
+        infer:
+          - '**/*.go'
+
 manifests:
   rawYaml:
     - k8s/namespace.yaml
     - k8s/producer.yaml
-    # - k8s/classifier.yaml
+    - k8s/classifier.yaml
+profiles:
+  - name: development
+    activation:
+      - command: dev

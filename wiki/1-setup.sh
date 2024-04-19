@@ -12,8 +12,11 @@ helm repo add flink-operator-repo https://downloads.apache.org/flink/flink-kuber
 # Add the Apache Spark k8s operator helm repository
 helm repo add spark-operator https://kubeflow.github.io/spark-operator
 
+# Add bitnami repo
+helm repo add bitnami https://charts.bitnami.com/bitnami
+
 # Update 
-helm repo update strimzi flink-operator-repo spark-operator
+helm repo update strimzi flink-operator-repo spark-operator bitnami
 
 # Install certificate manager
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
@@ -22,6 +25,10 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 helm install kafka-operator strimzi/strimzi-kafka-operator \
 	--namespace operators --create-namespace --version 0.40.0\
 	--set watchAnyNamespace=true
+
+# Install rabbitmq
+helm install rabbitmq-operator bitnami/rabbitmq-cluster-operator \
+	--namespace operators --create-namespace --version 13.18.2
 
 # Wait for cert manager
 kubectl wait --for=condition=Ready pods --all --namespace=cert-manager --timeout=300s
@@ -32,7 +39,7 @@ helm install flink-kubernetes-operator flink-operator-repo/flink-kubernetes-oper
 
 # Install spark operator into cluster
 helm install spark spark-operator/spark-operator \
-	--namespace operators --create-namespace --version v1beta2-1.3.8-3.1.1
+	--namespace operators --create-namespace --version 1.1.27
 
 # Install Minio
 kubectl apply -f k8s/minio-dev.yaml
@@ -48,3 +55,4 @@ kubectl wait --for=condition=Ready pods --all --namespace=kafka --timeout=300s
 
 # Install kafka topics
 kubectl apply -f k8s/kafka-topics.yaml
+

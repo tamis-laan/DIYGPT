@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"services/pkg/schema"
 	"strings"
 
@@ -17,6 +18,13 @@ import (
 
 type Payload struct {
 	Sentence string `json:"sentence"`
+}
+
+// Error handler
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
 }
 
 // Read configuration
@@ -57,9 +65,7 @@ func main() {
 	log.Println("topic", viper.GetString("topic.input"))
 
 	// Err check
-	if err != nil {
-		log.Fatal(err)
-	}
+	failOnError(err, "Failed to create new kafka consumer")
 
 	// Close consumer
 	defer c.Close()
@@ -77,9 +83,7 @@ func main() {
 	err = c.Subscribe(input_topic, nil)
 
 	// Err check
-	if err != nil {
-		log.Fatal(err)
-	}
+	failOnError(err, "Failed to subscribe to topic")
 
 	// Construct model endpoint url
 	model_enpoint := fmt.Sprintf("http://%s:%d/run", viper.GetString("model.host"), viper.GetInt("model.port"))
@@ -87,16 +91,21 @@ func main() {
 	// Create http client
 	client := &http.Client{}
 
+	// Regex for extracting sentences
+	sentenceRegex := regexp.MustCompile(`(?s)(.*?[\.\?!])(\s|$)`)
+	// sentenceRegex := regexp.MustCompile(`(?m)(.*?)(?:[\.\?!]|$)`)
+	// sentenceRegex := regexp.MustCompile(`(?m)(.*?)(?<!\b(?:c|e\.g)\.)(?:[\.\?!]|$)`)
+	// sentenceRegex := regexp.MustCompile(`(?:(?<=[.!?])|(?<=[.!?]['"]))(?<!Mr\.)(?<!Mrs\.)(?<!Jr\.)(?<!Dr\.)(?<!Prof\.)(?<!Sr\.)\s+`)
+	// sentenceRegex := regexp.MustCompile(`(?i)(?:(?<=[.!?])|(?<=[.!?]['"]))(?<! Mr\.)(?<! Mrs\.)(?<! Jr\.)(?<! Dr\.)(?<! Prof\.)(?<! Sr\.)\s+`)
+
 	// Go into consumption loop
 	for {
 
 		// Wait for a message
 		msg, err := c.ReadMessage(-1)
 
-		// Err check
-		if err != nil {
-			log.Fatal(err)
-		}
+		// Handle error
+		failOnError(err, "Cannot get message from kafka")
 
 		// Define content
 		content := schema.WikiPageCreateLocal{}
@@ -104,23 +113,24 @@ func main() {
 		// Unpack msg into content
 		err = json.Unmarshal(msg.Value, &content)
 
-		// Error check
-		if err != nil {
-			log.Fatal(err)
-		}
+		// Handle error
+		failOnError(err, "Cannot unpack message")
+
+		log.Println("PAGE: ", content.Page)
+
+		// Extract sentences
+		sentences := sentenceRegex.FindAllString(content.Page, -1)
 
 		// Create the payload
 		payload := Payload{
-			Sentence: content.Comment,
+			Sentence: sentences[0],
 		}
 
 		// Turn payload into json bytes
 		payloadBytes, err := json.Marshal(payload)
 
 		// Err check
-		if err != nil {
-			log.Fatal(err)
-		}
+		failOnError(err, "Cannot convert payload to json")
 
 		// Body reader
 		body := bytes.NewReader(payloadBytes)
@@ -135,17 +145,13 @@ func main() {
 		resp, err := client.Do(req)
 
 		// Err check
-		if err != nil {
-			log.Fatal(err)
-		}
+		failOnError(err, "Failed to send payload to model")
 
 		// Read the response body
 		responseBody, err := io.ReadAll(resp.Body)
 
 		// Error check
-		if err != nil {
-			log.Fatal(err)
-		}
+		failOnError(err, "Cannot read model response")
 
 		// Process message
 		log.Println(string(payloadBytes), "\n", string(responseBody))

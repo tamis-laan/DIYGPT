@@ -32,5 +32,6 @@ spec:
             value: sentiment.ai-models.svc.cluster.local
           - name: MODEL_PORT
             value: "8000"
-        command: ['classifier']
+        command: ['wgo']
+        args: ['run', 'cmd/classifier/main.go']
         imagePullPolicy: Never
